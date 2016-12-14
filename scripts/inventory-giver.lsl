@@ -5,9 +5,13 @@
 // Script adjusted to run faster by Strife Onizuka.
 
 // Rearranged and hover text added by seriesumei@avimail.org
+// v2 - add random object give
 
 // set TRUE to restrict to owner
 integer OWNER_ONLY = FALSE;
+
+// set TRUE to give one random object instead of all objects
+integer RANDOM_OBJECT = FALSE;
 
 vector COLOR = <1.0, 0.8, 1.0>;
 string PREFIX = "";
@@ -45,6 +49,12 @@ default {
                 llOwnerSay("Cannot give asset \""+name+"\", owner lacks copy permission");
 // Uncomment this to use progress bar in hover text
 //            llSetText(text + (string)((integer)(((i + 1.0) / num) * 100))+ "%", <1, 1, 1>, 1.0);
+        }
+
+        if (RANDOM_OBJECT) {
+            list rnd_inv = llListRandomize(inventory, 1);
+            // take the second item of the randomized list
+            inventory = [llList2String(rnd_inv, 1)];
         }
 
         //chew off the end off the text message.
