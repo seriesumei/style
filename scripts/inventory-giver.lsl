@@ -6,6 +6,7 @@
 
 // Rearranged and hover text added by seriesumei@avimail.org
 // v2 - add random object give
+// v3 - fix owner check
 
 // set TRUE to restrict to owner
 integer OWNER_ONLY = FALSE;
@@ -32,11 +33,11 @@ default {
         key         user;
 
         if (OWNER_ONLY) {
-            // Allow anyone to use
-            user = llDetectedKey(0);
-        } else {
             // Restrict to owner
             user = llGetOwner();
+        } else {
+            // Allow anyone to use
+            user = llDetectedKey(0);
         }
 
         llSetAlpha(0, 0);
