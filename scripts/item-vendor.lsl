@@ -4,6 +4,7 @@
 // v1 - Go!
 // v2 - Add prev/next button handler
 // v3 - Add texture cache
+// v4 - Skip texture set, do $L0 price
 
 // Buttons
 // A prim named 'buttons' will collect clicks to be decoded into buttons
@@ -12,7 +13,7 @@
 // http://wiki.secondlife.com/wiki/Dispenser_Vendor
 
 // Price
-integer price = 100;
+integer price = 0;
 
 // Deliver all inventory
 // TRUE = what it sounds like, except for this script
@@ -37,7 +38,10 @@ integer report_IM = FALSE;
 integer report_HTTP = FALSE;
 
 // Should CLICK_ACTION_PAY be set?
-integer set_pay = FALSE;
+integer set_pay = TRUE;
+
+// Show textures
+integer show_texture = FALSE;
 
 // Which side is the texture shown on?
 integer DISPLAY_FACE = 4;  // ALL_SIDES;
@@ -192,9 +196,28 @@ give_items(key id) {
     }
 }
 
+deliver_items(key id, integer amount) {
+    // Deliver items
+    give_items(id);
+    string buyer = llKey2Name(id);
+    buyers += buyer;
+    buyers += llGetUnixTime();
+    if (LOG_TRANSACTIONS) {
+        // do offsite logging here
+        string timestamp = FormatTime(llGetTimestamp());
+        do_log(report,
+            timestamp + " " +
+            owner_name + "," +
+            vendor_name + "," +
+            buyer + "," +
+            (string)amount
+        );
+    }
+}
+
 set_texture(integer num) {
     debug("set_texture(): " + (string)num);
-    if (num >= 0) {
+    if (num >= 0 && show_texture) {
         string current_texture = llGetInventoryName(INVENTORY_TEXTURE, num);
         llSetTexture(current_texture, DISPLAY_FACE);
         llSetLinkTexture(preview_link, current_texture, DISPLAY_FACE);
@@ -204,7 +227,7 @@ set_texture(integer num) {
             SetLinkText(text_link, current_texture, <1,1,1>, 1);
         }
     }
-    if (DISPLAY_FACE != CACHE_FACE && counter_next >= 0) {
+    if (DISPLAY_FACE != CACHE_FACE && counter_next >= 0 && show_texture) {
         string next_texture = llGetInventoryName(INVENTORY_TEXTURE, counter_next);
         llSetTexture(next_texture, CACHE_FACE);
         llSetLinkTexture(preview_link, next_texture, CACHE_FACE);
@@ -263,7 +286,7 @@ default {
 
         // Do this here if we're running without PERMISSION_DEBIT
         llSetPayPrice(PAY_HIDE, [price ,PAY_HIDE, PAY_HIDE, PAY_HIDE]);
-        if (set_pay)
+        if (set_pay && price != 0)
             llSetClickAction(CLICK_ACTION_PAY);
     }
 
@@ -288,8 +311,12 @@ default {
             }
         }
         else {
-            if(llDetectedKey(0) != llGetOwner())
-                return;
+            key id = llDetectedKey(0);
+            if(id != llGetOwner())
+                if (set_pay && price == 0)
+                    deliver_items(id, 0);
+                else
+                    return;
             integer itra;
             llOwnerSay("===== BUYERS =====");
             for(itra=0; itra<llGetListLength(buyers); itra+=2) {
@@ -319,22 +346,7 @@ default {
 //            llGiveMoney(id, change);
         }
         if (amount == price) {
-            // Deliver items
-            give_items(id);
-            string buyer = llKey2Name(id);
-            buyers += buyer;
-            buyers += llGetUnixTime();
-            if (LOG_TRANSACTIONS) {
-                // do offsite logging here
-                string timestamp = FormatTime(llGetTimestamp());
-                do_log(report,
-                    timestamp + " " +
-                    owner_name + "," +
-                    vendor_name + "," +
-                    buyer + "," +
-                    (string)amount
-                );
-            }
+            deliver_items(id, amount);
         }
     }
 
