@@ -8,6 +8,7 @@
 // v2 - add random object give
 // v3 - fix owner check
 // v4 - detect attachment and offer inventory
+// v5 - minimize memory requirements
 
 // set TRUE to restrict to owner
 integer OWNER_ONLY = FALSE;
@@ -20,6 +21,9 @@ integer PROGRESS_BAR = FALSE;
 
 vector COLOR = <1.0, 0.8, 1.0>;
 string PREFIX = "";
+
+// Max memory (bytes)
+integer mem_limit = 32768;
 
 // Do object inventory delivery to avatar inventory
 deliver_inventory(key user) {
@@ -40,6 +44,12 @@ deliver_inventory(key user) {
             llSetText(text + (string)((integer)(((i + 1.0) / num) * 100))+ "%", <1, 1, 1>, 1.0);
     }
 
+    // we don't want to give them this script
+    i = llListFindList(inventory, [llGetScriptName()]);
+    if (~i)
+        // if this script is found then we should remove it
+        inventory = llDeleteSubList(inventory, i, i);
+
     if (RANDOM_OBJECT) {
         list rnd_inv = llListRandomize(inventory, 1);
         // take the second item of the randomized list
@@ -48,12 +58,6 @@ deliver_inventory(key user) {
 
     // chew off the end off the text message.
     text = PREFIX + llGetObjectName();
-
-    // we don't want to give them this script
-    i = llListFindList(inventory, [llGetScriptName()]);
-    if (~i)
-        // if this script isn't found then we shouldn't try and remove it
-        inventory = llDeleteSubList(inventory, i, i);
 
     if (llGetListLength(inventory) < 1) {
         llOwnerSay("No items to offer.");
@@ -73,6 +77,7 @@ deliver_inventory(key user) {
 default {
 
     state_entry() {
+        llSetMemoryLimit(mem_limit);
         llSetText(llGetObjectName(), COLOR, 1);
     }
 
@@ -90,6 +95,7 @@ default {
             }
         }
         deliver_inventory(user);
+//        llOwnerSay("Free: " + (string)llGetFreeMemory());
     }
 
     attach(key id) {
@@ -99,6 +105,7 @@ default {
         } else {
             if (llGetAttached() == 0) {
                 // detach
+//                llOwnerSay("Free: " + (string)llGetFreeMemory());
             } else {
                 // left over event from prior detach
             }
