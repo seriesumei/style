@@ -3,10 +3,14 @@
 
 // v1 - 04Jan2019 <seriesumei@avimail.org> - Initial combo applier
 // v2 - 13Jan2019 <seriesumei@avimail.org> - Rework for Omega 4.41+
+// v2.rw - 23Jun2019 <seriesumei@avimail.org> - Robin Wood applier version
 
 // Textures - Use the Omega structure and pick out what we need for Ruth
+// The Omega notecard should have button names 'upper', 'h_<color>_<makeup>'
+// (head) and 'l_<color>_<makeup>' (lower).
 
-// Buttons - The skin buttons are named 'sb_N'
+// Buttons - There are three skin button types, they are prefixed with
+//           'c_' (color), 'm_' (makeup) and 'l_' (lower).
 
 // Select the applier to activate
 integer DO_RUTH = FALSE;
@@ -17,6 +21,11 @@ vector on_color = <0.3, 0.3, 0.3>;
 
 integer channel;
 integer app_id = 20181024;
+
+// HUD Texture States
+string state_color = "black";
+string state_makeup = "natural";
+string state_lower = "princess";
 
 // To simplify the creator's life we read Omega-compatible notecards
 string NOTECARD = "!MASTER_CONFIG";
@@ -218,20 +227,33 @@ default {
         integer link = llDetectedLinkNumber(0);
         integer face = llDetectedTouchFace(0);
         vector pos = llDetectedTouchST(0);
-        string name = llGetLinkName(link);
+        list d = llGetLinkPrimitiveParams(link, [PRIM_NAME, PRIM_DESC]);
+        string name = llList2String(d, 0);
+        string desc = llList2String(d, 1);
+        log("Touched: " + name + ", " + desc);
 
         if (reading_notecard) {
             llOwnerSay("Reading notecard, please wait...");
             return;
         }
 
-        if (llGetSubString(name, 0, 2) == "sb_") {
-            llSetLinkPrimitiveParamsFast(link, [PRIM_COLOR, face, on_color, 1.0]);
-            integer bx = (integer)(pos.x * 2);
-            name += map_button_3(face, bx);
-            apply_texture(name);
-            llSetLinkPrimitiveParamsFast(link, [PRIM_COLOR, face, off_color, 1.0]);
+        // Make the state change according to the button
+        if (llGetSubString(name, 0, 1) == "c_") {
+            state_color = llGetSubString(name, 2, -1);
         }
+        if (llGetSubString(name, 0, 1) == "m_") {
+            state_makeup = llGetSubString(name, 2, -1);
+        }
+        if (llGetSubString(name, 0, 1) == "l_") {
+            state_lower = llGetSubString(name, 2, -1);
+        }
+
+        // This is particular to how Omega arranges its regions
+        // we do them in stages to reduce the memory and combinations
+        // required in the notecard.
+        apply_texture("h_" + state_color + "_" + state_makeup);
+        apply_texture("upper");
+        apply_texture("l_" + state_color + "_" + state_lower);
         log("Free memory " + (string)llGetFreeMemory() + "  Limit: " + (string)MEM_LIMIT);
     }
 
